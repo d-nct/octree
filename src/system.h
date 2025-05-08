@@ -9,6 +9,8 @@
 /* DEFINIÇÕES
    ---------- */
 
+typedef int bool;
+
 /* Máximo de pontos antes de subdividir um nó (int) */
 #define NOCTREE_CAPACIDADE 10 // Coloquei 10 só por colocar qualquer coisa. TODO
 
