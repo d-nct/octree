@@ -8,15 +8,12 @@
  * Cria a estrutura de dados Noctree, que é um Nó da Octree
  */
 typedef struct _Noctree {
-	amostra[NOCTREE_CAPACIDADE] pontos; // Vetor com pontos contido no nó.
-	int qtPontos; // Tamanho do vetor com os pontos
-	amostra* centro; // Ponto central do cubo
-	float[3] tamanho; // Dimensões X, Y, Z do cubo
-	// float tamanho_x; // Dimensões fixas do cubo (eixo X)
-	// float tamanho_y; // Dimensões fixas do cubo (eixo Y)
-	// float tamanho_z; // Dimensões fixas do cubo (eixo Z)
-	struct _Noctree[8] filhos; // 8 filhos do Nóctree
-	bool subdividido; // Se o nó foi subdividido
+	amostra* pontos[NOCTREE_CAPACIDADE]; // Vetor com pontos contido no nó.
+	int qtPontos;                        // Tamanho do vetor com os pontos
+	amostra* centro;                     // Ponto central do cubo
+	float tamanho[DIM];                  // Dimensões X, Y, Z do cubo
+	struct _Noctree filhos[QT_FILHOS_NOCTREE]; // 8 filhos do Nóctree
+	bool subdividido;                    // 1 se o nó foi subdividido; 0 c.c.
 } noctree;
 
 /**
@@ -24,6 +21,7 @@ typedef struct _Noctree {
  * 
  * @param centro É o centro do cubo.
  * @param tamanho Vetor coma as dimensões do cubo em X, Y e Z.
+ *
  * @return Ponteiro para o nó da Octree vazio.
  */
 noctree* inicializaNo(amostra* centro, float* tamanho);
@@ -33,6 +31,9 @@ noctree* inicializaNo(amostra* centro, float* tamanho);
  *
  * @param no É o nó da Octree que será a nova moradia do ponto.
  * @param ponto É uma amostra do LIDAR.
+ * 
+ * @return 1, se ok
+ * 			   0, c.c.
  */
 bool insereAmostra(noctree* no, amostra* ponto);
 
@@ -45,7 +46,18 @@ void subdividir(noctree* no);
 
 /**
  * Redistribui uma amostra para o nó apropriado.
+ * 
+ * @param no É o nó pai.
+ * @param ponto É a amostra a ser realocada
+ * 
+ * @return 1, se ok
+ * 			   0, c.c.
  */
 bool realocaAmostra(noctree* no, amostra* ponto);
+
+/**
+ * Baseado em um nó e seu tamanho, calcula o novo centro do octante para seu i-ésimo filho.
+ */
+amostra* calculaCentroDoOctante(noctree* no, float* tamanho, int i);
 
 #endif
