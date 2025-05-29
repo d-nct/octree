@@ -90,3 +90,14 @@ bool realocaAmostra(noctree* no, amostra* ponto) {
 		return 0;
 	}
 }
+
+amostra* calculaCentroDoOctante(noctree* no, float* tamanho, int i) {
+    amostra* centro = inicializaAmostra(0, 0, 0);
+
+    /* Calcula o centro do octante baseado no nó e no tamanho */
+    centro->x = no->centro->x + ((i & 1) ? tamanho[0] / 2 : -tamanho[0] / 2);
+    centro->y = no->centro->y + ((i & 2) ? tamanho[1] / 2 : -tamanho[1] / 2);
+    centro->z = no->centro->z + ((i & 4) ? tamanho[2] / 2 : -tamanho[2] / 2);
+
+    return centro;
+}
