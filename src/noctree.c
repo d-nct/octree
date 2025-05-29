@@ -3,6 +3,7 @@
  * 
  * Implementação das funções do Octree. Para ver a documentação, consulte o header.
  */
+
 #include "noctree.h"
 
 noctree* inicializaNo(amostra* centro, float* tamanho) {
@@ -12,13 +13,21 @@ noctree* inicializaNo(amostra* centro, float* tamanho) {
 
 	/* Inicializa */
 	for (int i = 0; i < NOCTREE_CAPACIDADE; i++) {
-		no->pontos[i] = 0;
+		no->pontos[i] = inicializaAmostra(0,0,0);
 	}
+
 	no->qtPontos    = 0;
+
 	no->centro      = centro;
-	no->tamanho     = tamanho;
-	no->filhos      = [NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL];
+
+    for(int i = 0; i < DIM; i++) {
+        no->tamanho[i] = tamanho[i];
+    }
+
+    /* Note que os filhos serão inicializados apenas quanto  subdividido == 1 */
 	no->subdividido = 0;
+
+    return no;
 }
 
 bool insereAmostra(noctree* no, amostra* ponto) {
@@ -32,7 +41,7 @@ bool insereAmostra(noctree* no, amostra* ponto) {
 
 			// Reinsere os pontos nos filhos apropriados
 			for (int i = 0; i < no->qtPontos; i++) {
-				realocaAmostra(no, no->pontos[i])
+				realocaAmostra(no, no->pontos[i]);
 			}
 			
 			// Limpa o vetor de amostras
@@ -44,21 +53,21 @@ bool insereAmostra(noctree* no, amostra* ponto) {
 }
 
 void subdividir(noctree* no) {
-	amostra novoCentro;
-	float[3] novoTamanho;
+	amostra** novoCentro;
+	float novoTamanho[DIM];
 
 	/* Cria os filhos */
-	for (int i=0; i < 8; i++) {
+	for (int i=0; i < NOCTREE_CAPACIDADE; i++) {
 		/* Calcula o novo centro */
-		novoCentro = calculaCentroDoOctante(no->centro, no->tamanho, i);
+		*novoCentro = calculaCentroDoOctante(no->centro, no->tamanho, i);
 		
 		/* Calcula os novos tamanhos */
-		novoTamanho[0] = no->tamanho[0] / 2; // Eixo X
-		novoTamanho[1] = no->tamanho[1] / 2; // Eixo Y
-		novoTamanho[2] = no->tamanho[2] / 2; // Eixo Z
+        for (int j=0; j < DIM; j++) {
+            novoTamanho[j] = no->tamanho[j] / 2; // Eixos X,Y,Z
+        }
 
 		/* Inicializa o filho correspondente */
-		no->filhos[i] = inicializaNo(novoCentro, novoTamanho);
+		no->filhos[i] = inicializaNo(*novoCentro, novoTamanho);
 	}
 
 	/* Marca como dividido */
@@ -69,13 +78,13 @@ bool realocaAmostra(noctree* no, amostra* ponto) {
 	int posicao = 0;
 
 	// Calcula a posição
-	if (ponto->x >= no->centro->x) indice += 1;
-	if (ponto->y >= no->centro->y) indice += 2;
-	if (ponto->z >= no->centro->z) indice += 4;
+	if (ponto->x >= no->centro->x) posicao += 1;
+	if (ponto->y >= no->centro->y) posicao += 2;
+	if (ponto->z >= no->centro->z) posicao += 4;
 
 	// TODO esse check não tá bom. A ideia é ver se o nó tá 0 bala. COmo ver isso?
 	if (posicao >= no->qtPontos) {
-		return insereAmostra(no->filhos[posicao], ponto)
+		return insereAmostra(&no->filhos[posicao], ponto);
 	} else {
 		// TODO ver o que fazer se o nó não estiver 0
 		return 0;

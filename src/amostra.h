@@ -10,4 +10,9 @@ typedef struct _Amostra {
     float z;
 } amostra;
 
+/**
+ * Inicializa uma amostra do LIDAR.
+ */
+amostra* inicializaAmostra(float x, float y, float z);
+
 #endif
