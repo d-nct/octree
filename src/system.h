@@ -14,6 +14,9 @@ typedef int bool;
 /* Máximo de pontos antes de subdividir um nó (int) */
 #define NOCTREE_CAPACIDADE 10 // Coloquei 10 só por colocar qualquer coisa. TODO
 
+#define DIM                3 // X, Y e Z
+#define QT_FILHOS_NOCTREE  8 // Quantidade de filhos de cada Nó Octree
+
 /* ERROS
    ---------- */
 #define ERRO_ALOCACAO     1
