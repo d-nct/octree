@@ -12,7 +12,7 @@ typedef struct _Noctree {
 	int qtPontos;                        // Tamanho do vetor com os pontos
 	amostra* centro;                     // Ponto central do cubo
 	float tamanho[DIM];                  // Dimensões X, Y, Z do cubo
-	struct _Noctree filhos[QT_FILHOS_NOCTREE]; // 8 filhos do Nóctree
+	struct _Noctree *filhos[QT_FILHOS_NOCTREE]; // 8 filhos do Nóctree
 	bool subdividido;                    // 1 se o nó foi subdividido; 0 c.c.
 } noctree;
 

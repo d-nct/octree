@@ -7,27 +7,31 @@
 #include "noctree.h"
 
 noctree* inicializaNo(amostra* centro, float* tamanho) {
-	/* Aloca a memória */
-	noctree* no = (noctree*) malloc(sizeof(noctree));
-	CHECK_MALLOC(no);
+  /* Aloca a memória */
+  noctree* no = (noctree*) malloc(sizeof(noctree));
+  CHECK_MALLOC(no);
 
-	/* Inicializa */
-	for (int i = 0; i < NOCTREE_CAPACIDADE; i++) {
-		no->pontos[i] = inicializaAmostra(0,0,0);
-	}
+  /* Inicializa */
+  for (int i = 0; i < NOCTREE_CAPACIDADE; i++) {
+    no->pontos[i] = NULL; /* Não aloca memória */
+  }
 
-	no->qtPontos    = 0;
+  for (int i = 0; i < QT_FILHOS_NOCTREE; i++) {
+    no->filhos[i] = NULL; /* Não aloca memória */
+  }
 
-	no->centro      = centro;
+  no->qtPontos = 0;
 
-    for(int i = 0; i < DIM; i++) {
-        no->tamanho[i] = tamanho[i];
-    }
+  no->centro   = centro;
 
-    /* Note que os filhos serão inicializados apenas quanto  subdividido == 1 */
-	no->subdividido = 0;
+  for(int i = 0; i < DIM; i++) {
+    no->tamanho[i] = tamanho[i];
+  }
 
-    return no;
+  /* Note que os filhos serão inicializados apenas quanto  subdividido == 1 */
+  no->subdividido = 0;
+
+  return no;
 }
 
 bool insereAmostra(noctree* no, amostra* ponto) {
@@ -37,7 +41,7 @@ bool insereAmostra(noctree* no, amostra* ponto) {
 			no->qtPontos++;
 			return 1;
 		} else { // Divide
-			subdividir(no); // TODO
+			subdividir(no);
 
 			// Reinsere os pontos nos filhos apropriados
 			for (int i = 0; i < no->qtPontos; i++) {
@@ -53,21 +57,20 @@ bool insereAmostra(noctree* no, amostra* ponto) {
 }
 
 void subdividir(noctree* no) {
-	amostra** novoCentro;
 	float novoTamanho[DIM];
 
-	/* Cria os filhos */
-	for (int i=0; i < NOCTREE_CAPACIDADE; i++) {
-		/* Calcula o novo centro */
-		*novoCentro = calculaCentroDoOctante(no->centro, no->tamanho, i);
-		
-		/* Calcula os novos tamanhos */
-        for (int j=0; j < DIM; j++) {
-            novoTamanho[j] = no->tamanho[j] / 2; // Eixos X,Y,Z
-        }
+  /* Calcula os novos tamanhos */
+  for (int j=0; j < DIM; j++) {
+    novoTamanho[j] = no->tamanho[j] / 2.0f; // Eixos X,Y,Z
+  }
 
+	/* Cria os filhos */
+	for (int i=0; i < QT_FILHOS_NOCTREE; i++) {
+		/* Calcula o novo centro */
+		amostra *novoCentro = calculaCentroDoOctante(no, novoTamanho, i);
+		
 		/* Inicializa o filho correspondente */
-		no->filhos[i] = inicializaNo(*novoCentro, novoTamanho);
+		no->filhos[i] = inicializaNo(novoCentro, novoTamanho);
 	}
 
 	/* Marca como dividido */
@@ -82,13 +85,7 @@ bool realocaAmostra(noctree* no, amostra* ponto) {
 	if (ponto->y >= no->centro->y) posicao += 2;
 	if (ponto->z >= no->centro->z) posicao += 4;
 
-	// TODO esse check não tá bom. A ideia é ver se o nó tá 0 bala. COmo ver isso?
-	if (posicao >= no->qtPontos) {
-		return insereAmostra(&no->filhos[posicao], ponto);
-	} else {
-		// TODO ver o que fazer se o nó não estiver 0
-		return 0;
-	}
+  return insereAmostra(no->filhos[posicao], ponto);
 }
 
 amostra* calculaCentroDoOctante(noctree* no, float* tamanho, int i) {
