@@ -61,6 +61,9 @@ int insereAmostra(noctree* no, amostra* ponto) {
 }
 
 void subdividir(noctree* no) {
+  LOGP("Subdividindo nó com centro (%.2f, %.2f, %.2f) e tamanho (%.2f)",
+             no->centro->x, no->centro->y, no->centro->z, no->tamanho[0]); ENDL;
+
   float novoTamanho[DIM];
 
   /* Calcula os novos tamanhos */
@@ -75,6 +78,10 @@ void subdividir(noctree* no) {
 
     /* Inicializa o filho correspondente */
     no->filhos[i] = inicializaNo(novoCentro, novoTamanho);
+
+    LOGP(" -> Filho %d criado com centro (%.2f, %.2f, %.2f) e tamanho (%.2f)",
+             i, novoCentro->x, novoCentro->y, novoCentro->z, novoTamanho[0]); ENDL;
+
   }
 
   /* Marca como dividido */
@@ -88,6 +95,10 @@ int realocaAmostra(noctree* no, amostra* ponto) {
   if (ponto->x >= no->centro->x) posicao += 1;
   if (ponto->y >= no->centro->y) posicao += 2;
   if (ponto->z >= no->centro->z) posicao += 4;
+
+  LOGP("Realocando ponto (%.2f, %.2f, %.2f) para o filho de índice %d do nó com centro (%.2f, %.2f, %.2f)",
+           ponto->x, ponto->y, ponto->z, posicao, no->centro->x, no->centro->y, no->centro->z); ENDL;
+
 
   return insereAmostra(no->filhos[posicao], ponto);
 }
