@@ -1,6 +1,8 @@
 #ifndef AMOSTRA_H
 #define AMOSTRA_H
 
+#include "system.h"
+
 /**
  * Estrutura para armazenar uma amostra do LIDAR.
  */

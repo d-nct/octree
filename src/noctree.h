@@ -13,7 +13,7 @@ typedef struct _Noctree {
 	amostra* centro;                     // Ponto central do cubo
 	float tamanho[DIM];                  // Dimensões X, Y, Z do cubo
 	struct _Noctree *filhos[QT_FILHOS_NOCTREE]; // 8 filhos do Nóctree
-	bool subdividido;                    // 1 se o nó foi subdividido; 0 c.c.
+	int subdividido;                     // 1 se o nó foi subdividido; 0 c.c.
 } noctree;
 
 /**
@@ -35,7 +35,7 @@ noctree* inicializaNo(amostra* centro, float* tamanho);
  * @return 1, se ok
  * 			   0, c.c.
  */
-bool insereAmostra(noctree* no, amostra* ponto);
+int insereAmostra(noctree* no, amostra* ponto);
 
 /**
  * Subdivide um nó da Octree em 8 octantes.
@@ -53,11 +53,16 @@ void subdividir(noctree* no);
  * @return 1, se ok
  * 			   0, c.c.
  */
-bool realocaAmostra(noctree* no, amostra* ponto);
+int realocaAmostra(noctree* no, amostra* ponto);
 
 /**
  * Baseado em um nó e seu tamanho, calcula o novo centro do octante para seu i-ésimo filho.
  */
 amostra* calculaCentroDoOctante(noctree* no, float* tamanho, int i);
+
+/**
+ * Destrói um nó da octree de forma segura. Isto é, desalocando o que foi alocado.
+ */
+void destroiNo(noctree* no);
 
 #endif
