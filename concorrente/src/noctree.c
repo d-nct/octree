@@ -6,6 +6,24 @@
 
 #include "noctree.h"
 
+
+int esferaIntersectaCubo(amostra* centro_esfera, float raio, noctree* no) {
+  float raio2 = raio * raio;
+  float dist_cubo_x = fmax(0.0f, fabs(centro_esfera->x - no->centro->x) - no->tamanho[0]);
+  float dist_cubo_y = fmax(0.0f, fabs(centro_esfera->y - no->centro->y) - no->tamanho[1]);
+  float dist_cubo_z = fmax(0.0f, fabs(centro_esfera->z - no->centro->z) - no->tamanho[2]);
+
+  return (dist_cubo_x*dist_cubo_x + dist_cubo_y*dist_cubo_y + dist_cubo_z*dist_cubo_z) < raio2;
+}
+
+inline float dist2(amostra* p1, amostra* p2) {
+  float dx = p1->x - p2->x;
+  float dy = p1->y - p2->y;
+  float dz = p1->z - p2->z;
+  return dx*dx + dy*dy + dz*dz;
+}
+
+
 noctree* inicializaNo(amostra* centro, float* tamanho) {
   LOGP("Cheguei no inicializaNo"); ENDL;
   /* Aloca a memória */
@@ -150,11 +168,115 @@ void destroiNo(noctree* no) {
   free(no);
 }
 
-/*amostra** buscaPorRegiao(noctree* no, amostra* centro, float raio, int* qt_encontrados) {*/
-/*  /* Pega o lock de leitura -> bloqueia escrita */*/
-/*  pthread_rwlock_rdlock(&no->lock);*/
-/**/
-/**/
-/*  /* Libera para escrita */*/
-/*  pthread_rwlock_unlock(&no->lock);*/
-/*}*/
+static void passoDaBuscaPorRegiao(noctree* no, amostra* centro_busca, float raio2, amostra*** resultados, int* qt_encontrados, int* capacidade) {
+  pthread_rwlock_rdlock(&no->lock);
+
+  /* Se a região não passa pelo nó, fim da busca nele e seus filhos */
+  if (!esferaIntersectaCubo(centro_busca, sqrtf(raio2), no)) {
+    pthread_rwlock_unlock(&no->lock);
+    return;
+  }
+  
+  /* Ok, passa pelo nó. */
+
+  /* Se não é folha */
+  if (no->subdividido) {
+    for (int i = 0; i < QT_FILHOS_NOCTREE; i++) {
+      if (no->filhos[i]) {
+        passoDaBuscaPorRegiao(no->filhos[i], centro_busca, raio2, 
+                              resultados, qt_encontrados, capacidade);
+      }
+    }
+  } else { /* Se é folha, registramos apenas se está dentro da regiao */
+    for (int i = 0; i < no->qtPontos; i++) {
+      if (dist2(no->pontos[i], centro_busca) <= raio2) { 
+        // Adiciona o ponto ao vetor de resultados, realocando se necessário
+        if (*qt_encontrados >= *capacidade) {
+          *capacidade *= 2;
+          *resultados = realloc(*resultados, sizeof(amostra*) * (*capacidade));
+          // TODO: talvez esse realloc dê problema com as threads
+        }
+        (*resultados)[*qt_encontrados] = no->pontos[i];
+        (*qt_encontrados)++;
+      }
+    }
+  }
+
+  /* Libera o lock */
+  pthread_rwlock_unlock(&no->lock);
+}
+
+
+amostra** buscaPorRegiao(noctree* no, amostra* centro, float raio, int* qt_encontrados) {
+  int capacidade = 16; // Capacidade inicial do array de resultados
+  amostra** resultados = malloc(sizeof(amostra*) * capacidade);
+  if (!resultados) return NULL;
+  // TODO: acho que deveria ter um lock para esse vetor de resultados também!!
+
+  /* Housekeeping da entrada que faz parte da saída */
+  *qt_encontrados = 0;
+  float raio2 = raio * raio; /* raio^2 para evitar chamar sqrt */
+
+  /* Passo recursivo */
+  passoDaBuscaPorRegiao(no, centro, raio2, &resultados, qt_encontrados, &capacidade);
+
+  /* Tira o espaço livre do vetor */
+  if (*qt_encontrados > 0) {
+    resultados = realloc(resultados, sizeof(amostra*) * (*qt_encontrados));
+  } else {
+    free(resultados);
+    resultados = NULL;
+  }
+
+  return resultados;
+}
+
+
+amostra** buscaNaFolha(noctree* no, amostra* alvo, int* qt_encontrados) {
+  /* Sanitiza a entrada */
+  *qt_encontrados = 0;
+
+  /* Pega o lock de leitura do nó */
+  pthread_rwlock_rdlock(&no->lock);
+
+  /* Se não estamos na folha */
+  if (no->subdividido) {
+    /* Libera o pai antes de descer para o filho */
+    pthread_rwlock_unlock(&no->lock); 
+
+    /* Vemos para qual filho devemos ir */
+    int posicao = 0;
+    if (alvo->x >= no->centro->x) posicao += 1;
+    if (alvo->y >= no->centro->y) posicao += 2;
+    if (alvo->z >= no->centro->z) posicao += 4;
+
+    /* Desce para o filho correto */
+    if (no->filhos[posicao]) {
+      return buscaNaFolha(no->filhos[posicao], alvo, qt_encontrados);
+    } else {
+      return NULL; /* Se o filho não existe, não tem amostra lá -> lista vazia */
+    }
+  } 
+  /* Se estamos numa folha, então é a folha correta */
+  else {
+    if (no->qtPontos == 0) { /* Se não há amostras -> lista vazia */
+      pthread_rwlock_unlock(&no->lock);
+      return NULL;
+    }
+
+    amostra** resultados = malloc(sizeof(amostra*) * no->qtPontos);
+    CHECK_MALLOC(resultados); /* TODO: seria bom largar o lock antes de chamar exit */
+    /*if (!resultados) {*/
+    /*  pthread_rwlock_unlock(&no->lock);*/
+    /*  return NULL;*/
+    /*}*/
+
+    memcpy(resultados, no->pontos, sizeof(amostra*) * no->qtPontos);
+    *qt_encontrados = no->qtPontos;
+
+    pthread_rwlock_unlock(&no->lock);
+    return resultados;
+  }
+
+}
+
