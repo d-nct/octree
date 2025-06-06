@@ -1,0 +1,3 @@
+*[^.] # Binários
+*.pdf
+*.txt
