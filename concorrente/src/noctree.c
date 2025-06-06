@@ -32,32 +32,45 @@ noctree* inicializaNo(amostra* centro, float* tamanho) {
   /* Note que os filhos serão inicializados apenas quanto  subdividido == 1 */
   no->subdividido = 0;
 
+  /* Inicializa o lock */
+  if (pthread_rwlock_init(&no->lock, NULL) != 0) {
+    LOG_ERROR(ERRO_LOCK, "Falha na inicialização do rwlock");
+  }
+
   return no;
 }
 
 int insereAmostra(noctree* no, amostra* ponto) {
-  if (!no->subdividido) { // Insere nesse nó se houver espaço
-    if (no->qtPontos < NOCTREE_CAPACIDADE) { // Se não está cheio
-      no->pontos[no->qtPontos] = ponto;
-      no->qtPontos++;
-      return 1;
-    } else { 
-      // Divide
-      subdividir(no);
+  int status = 1;
 
-      // Reidistribui os pontos nos filhos apropriados
-      for (int i = 0; i < NOCTREE_CAPACIDADE; i++) {
-        realocaAmostra(no, no->pontos[i]);
-        no->pontos[i] = NULL;
-      }
+  /* A primeira coisa é pegar o lock de escrita */
+  pthread_rwlock_wrlock(&no->lock);
+
+  /* Depois segue normalmente a sessão crítica */
+  if (no->subdividido) { // Amostra fica sempre nas folhas
+    return realocaAmostra(no, ponto);
+  }
+  else if (no->qtPontos < NOCTREE_CAPACIDADE) { // É folha & há espaço
+    no->pontos[no->qtPontos] = ponto;
+    no->qtPontos++;
+    return status;
+  }
+  else { // É folha, mas não há espaço -> subdivide
+    subdividir(no);
+
+    // Reidistribui os pontos nos filhos apropriados
+    for (int i = 0; i < NOCTREE_CAPACIDADE; i++) {
+      status = status & realocaAmostra(no, no->pontos[i]);
+      no->pontos[i] = NULL;
 
       // Limpa o vetor de amostras
       no->qtPontos = 0;
     }
   }
 
-  // Se já subdividiu, insere no filho aequado
-  return realocaAmostra(no, ponto);
+  /* Solta o lock */
+  pthread_rwlock_unlock(&no->lock);
+  return status;
 }
 
 void subdividir(noctree* no) {
@@ -88,6 +101,7 @@ void subdividir(noctree* no) {
   no->subdividido = 1;
 }
 
+/* Não precisa de lock, posi só é chamada por insere, que é bloqueante */
 int realocaAmostra(noctree* no, amostra* ponto) {
   int posicao = 0;
 
@@ -128,8 +142,19 @@ void destroiNo(noctree* no) {
     free(no->pontos[i]);
   }
 
+  // Libera o lock
+  pthread_rwlock_destroy(&no->lock);
+
   // Libera a memória do centro do nó
   free(no->centro);
   free(no);
 }
 
+/*amostra** buscaPorRegiao(noctree* no, amostra* centro, float raio, int* qt_encontrados) {*/
+/*  /* Pega o lock de leitura -> bloqueia escrita */*/
+/*  pthread_rwlock_rdlock(&no->lock);*/
+/**/
+/**/
+/*  /* Libera para escrita */*/
+/*  pthread_rwlock_unlock(&no->lock);*/
+/*}*/

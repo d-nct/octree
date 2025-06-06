@@ -1,8 +1,8 @@
 #ifndef NOCTREE_H
 #define NOCTREE_H
 
-#include "amostra.h"
 #include "system.h"
+#include "amostra.h"
 
 /**
  * Cria a estrutura de dados Noctree, que é um Nó da Octree
@@ -14,6 +14,7 @@ typedef struct _Noctree {
 	float tamanho[DIM];                  // Dimensões X, Y, Z do cubo
 	struct _Noctree *filhos[QT_FILHOS_NOCTREE]; // 8 filhos do Nóctree
 	int subdividido;                     // 1 se o nó foi subdividido; 0 c.c.
+  pthread_rwlock_t lock;
 } noctree;
 
 /**

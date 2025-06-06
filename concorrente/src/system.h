@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <pthread.h>
 
 /* DEFINIÇÕES
    ---------- */
@@ -18,6 +19,7 @@
 /* ERROS
    ---------- */
 #define ERRO_ALOCACAO     1
+#define ERRO_LOCK         2
 
 // Macro para logar erros
 #define LOG_ERROR(codigo, fmt, ...) \
