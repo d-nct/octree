@@ -1,3 +1,5 @@
 *[^.] # Binários
 *.pdf
 *.txt
+*.out
+*.gch
