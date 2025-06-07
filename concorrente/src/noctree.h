@@ -25,7 +25,7 @@ typedef struct _Noctree {
 /**
  * Retorna o quadrado da distância euclidiana entre dois pontos.
  */
-inline float dist2(amostra* p1, amostra* p2);
+float dist2(amostra* p1, amostra* p2);
 
 /**
  * Verifica se uma esfera intersecta o cubo representado por um nó.
@@ -88,7 +88,7 @@ void destroiNo(noctree* no);
 
 /**
  * Realiza um passo da busca recursiva por região. 
- * NÃO DEVE SER CHAMADA PELO USUÁRIO!
+ * NÃO DEVE SER CHAMADA PELO USUÁRIO! Poderia ser static, mas preferi não o fazer para manter a documentação organizada no .h.
  *
  * @param no é a raiz da árvore
  * @param centro é o centroide ao redor do qual a busca será realizada
@@ -99,7 +99,7 @@ void destroiNo(noctree* no);
  *
  * @returns uma lista de amostras
  */
-static void passoDaBuscaPorRegiao(noctree* no, amostra* centro_busca, float raio2, amostra*** resultados, int* qt_encontrados, int* capacidade);
+void passoDaBuscaPorRegiao(noctree* no, amostra* centro_busca, float raio2, amostra*** resultados, int* qt_encontrados, int* capacidade);
 
 /**
  * Busca amostras em uma região da árvore.

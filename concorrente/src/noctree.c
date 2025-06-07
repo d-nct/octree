@@ -16,7 +16,7 @@ int esferaIntersectaCubo(amostra* centro_esfera, float raio, noctree* no) {
   return (dist_cubo_x*dist_cubo_x + dist_cubo_y*dist_cubo_y + dist_cubo_z*dist_cubo_z) < raio2;
 }
 
-inline float dist2(amostra* p1, amostra* p2) {
+float dist2(amostra* p1, amostra* p2) {
   float dx = p1->x - p2->x;
   float dy = p1->y - p2->y;
   float dz = p1->z - p2->z;
@@ -63,15 +63,15 @@ int insereAmostra(noctree* no, amostra* ponto) {
 
   /* A primeira coisa é pegar o lock de escrita */
   pthread_rwlock_wrlock(&no->lock);
+  LOGP(" Peguei o Lock"); ENDL;
 
   /* Depois segue normalmente a sessão crítica */
   if (no->subdividido) { // Amostra fica sempre nas folhas
-    return realocaAmostra(no, ponto);
+    realocaAmostra(no, ponto);
   }
   else if (no->qtPontos < NOCTREE_CAPACIDADE) { // É folha & há espaço
     no->pontos[no->qtPontos] = ponto;
     no->qtPontos++;
-    return status;
   }
   else { // É folha, mas não há espaço -> subdivide
     subdividir(no);
@@ -84,10 +84,14 @@ int insereAmostra(noctree* no, amostra* ponto) {
       // Limpa o vetor de amostras
       no->qtPontos = 0;
     }
+
+    // E insere o ponto passado como argumento
+    realocaAmostra(no, ponto);
   }
 
   /* Solta o lock */
   pthread_rwlock_unlock(&no->lock);
+  LOGP(" Soltei o Lock"); ENDL;
   return status;
 }
 
@@ -168,7 +172,7 @@ void destroiNo(noctree* no) {
   free(no);
 }
 
-static void passoDaBuscaPorRegiao(noctree* no, amostra* centro_busca, float raio2, amostra*** resultados, int* qt_encontrados, int* capacidade) {
+void passoDaBuscaPorRegiao(noctree* no, amostra* centro_busca, float raio2, amostra*** resultados, int* qt_encontrados, int* capacidade) {
   pthread_rwlock_rdlock(&no->lock);
 
   /* Se a região não passa pelo nó, fim da busca nele e seus filhos */
