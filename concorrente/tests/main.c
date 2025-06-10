@@ -66,7 +66,7 @@ bool encontra_ponto(noctree* no, amostra* ponto_busca) {
 
 void test_corretude_insercao_simples() {
   printf("Executando Teste 1: Corretude - Inserção Simples com Lock...\n");
-  noctree* raiz = inicializaNo(inicializaAmostra(0,0,0), (float[]){100,100,100});
+  noctree* raiz = inicializaNo(inicializaAmostra(0,0,0), (float[]){100,100,100}, 0);
 
   amostra* p1 = inicializaAmostra(10, 20, 30);
   insereAmostra(raiz, p1);
@@ -79,7 +79,7 @@ void test_corretude_insercao_simples() {
 
 void test_corretude_busca_em_folha() {
   printf("Executando Teste 2: Corretude - Busca em Folha com Lock...\n");
-  noctree* raiz = inicializaNo(inicializaAmostra(0,0,0), (float[]){100,100,100});
+  noctree* raiz = inicializaNo(inicializaAmostra(0,0,0), (float[]){100,100,100}, 0);
   amostra* p1 = inicializaAmostra(10, 10, 10);
   amostra* p2 = inicializaAmostra(20, 20, 20);
   insereAmostra(raiz, p1);
@@ -104,7 +104,7 @@ void test_corretude_busca_em_folha() {
 
 void test_safeness_escritores_concorrentes() {
   printf("Executando Teste 3: Thread-Safety - Dois Escritores Concorrentes...\n");
-  noctree* raiz = inicializaNo(inicializaAmostra(0,0,0), (float[]){100,100,100});
+  noctree* raiz = inicializaNo(inicializaAmostra(0,0,0), (float[]){100,100,100}, 0);
   pthread_t th1, th2;
 
   amostra* p_th1 = inicializaAmostra(25, 25, 25);
@@ -144,7 +144,7 @@ void* rotina_leitora(void* arg) {
 
 void test_safeness_leitor_e_escritor() {
   printf("Executando Teste 4: Thread-Safety - Leitores e um Escritor Concorrentes...\n");
-  noctree* raiz = inicializaNo(inicializaAmostra(0,0,0), (float[]){100,100,100});
+  noctree* raiz = inicializaNo(inicializaAmostra(0,0,0), (float[]){100,100,100}, 0);
   pthread_t th_escritor, th_leitor1, th_leitor2;
 
   // Pré-popula a árvore
@@ -179,7 +179,7 @@ void test_safeness_leitor_e_escritor() {
 
 void test_subdivisao_concorrente_manual() {
   printf("Executando Teste 5: Thread-Safety - Subdivisão Concorrente Manual...\n");
-  noctree* raiz = inicializaNo(inicializaAmostra(0,0,0), (float[]){100,100,100});
+  noctree* raiz = inicializaNo(inicializaAmostra(0,0,0), (float[]){100,100,100}, 0);
   // NOCTREE_CAPACIDADE é 10. Vamos usar 11 threads para forçar a subdivisão.
   pthread_t threads[11];
   dados_thread_escrita_t dados[11];
