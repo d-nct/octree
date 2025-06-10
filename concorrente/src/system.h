@@ -11,15 +11,16 @@
    ---------- */
 
 /* Máximo de pontos antes de subdividir um nó (int) */
-#define NOCTREE_CAPACIDADE 10 // Coloquei 10 só por colocar qualquer coisa. TODO
+#define NOCTREE_CAPACIDADE        10 // Coloquei 10 só por colocar qualquer coisa. TODO
 
-#define DIM                3 // X, Y e Z
-#define QT_FILHOS_NOCTREE  8 // Quantidade de filhos de cada Nó Octree
+#define DIM                        3 // X, Y e Z
+#define QT_FILHOS_NOCTREE          8 // Quantidade de filhos de cada Nó Octree
+#define NOCTREE_MAX_PROFUNDIDADE   8 // Limite para a recursão de subdivisão
 
 /* ERROS
    ---------- */
-#define ERRO_ALOCACAO     1
-#define ERRO_LOCK         2
+#define ERRO_ALOCACAO              1
+#define ERRO_LOCK                  2
 
 // Macro para logar erros
 #define LOG_ERROR(codigo, fmt, ...) \

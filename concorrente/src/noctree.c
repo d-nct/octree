@@ -24,31 +24,35 @@ float dist2(amostra* p1, amostra* p2) {
 }
 
 
-noctree* inicializaNo(amostra* centro, float* tamanho) {
+noctree* inicializaNo(amostra* centro, float* tamanho, int profundidade) {
   LOGP("Cheguei no inicializaNo"); ENDL;
   /* Aloca a memória */
   noctree* no = (noctree*) malloc(sizeof(noctree));
   CHECK_MALLOC(no);
 
-  /* Inicializa */
+  /* Aloca o o vetor de amostras, mas não os pontos em si */
+  no->pontos = (amostra**) malloc(sizeof(amostra*) * NOCTREE_CAPACIDADE);
+  CHECK_MALLOC(no->pontos);
+
   for (int i = 0; i < NOCTREE_CAPACIDADE; i++) {
     no->pontos[i] = NULL; /* Não aloca memória */
   }
 
-  for (int i = 0; i < QT_FILHOS_NOCTREE; i++) {
-    no->filhos[i] = NULL; /* Não aloca memória */
-  }
 
-  no->qtPontos = 0;
+  no->qtPontos     = 0;            // Qt de amostras no vetor de amostras
+  no->centro       = centro;       // Ponto que define o centroide do nó
+  no->profundidade = profundidade; // Profundidade do nó na árvore
 
-  no->centro   = centro;
-
+  /* Configura os tamanhos em X,Y,Z */
   for(int i = 0; i < DIM; i++) {
     no->tamanho[i] = tamanho[i];
   }
 
   /* Note que os filhos serão inicializados apenas quanto  subdividido == 1 */
   no->subdividido = 0;
+  for (int i = 0; i < QT_FILHOS_NOCTREE; i++) {
+    no->filhos[i] = NULL; /* Não aloca memória */
+  }
 
   /* Inicializa o lock */
   if (pthread_rwlock_init(&no->lock, NULL) != 0) {
@@ -58,8 +62,12 @@ noctree* inicializaNo(amostra* centro, float* tamanho) {
   return no;
 }
 
+/* Obs: essa função tem melhorias de desempenho bem claras pedindo para serem
+ * otimizadas, mas essa foi a forma que a lógica do código está mais clara.
+ * Conscientemente estamos priorizando a legibilidade frente ao desempenho!
+ * */
 int insereAmostra(noctree* no, amostra* ponto) {
-  int status = 1;
+  int status = 1; // Booleano de retorno da função
 
   /* A primeira coisa é pegar o lock de escrita */
   pthread_rwlock_wrlock(&no->lock);
@@ -73,20 +81,32 @@ int insereAmostra(noctree* no, amostra* ponto) {
     no->pontos[no->qtPontos] = ponto;
     no->qtPontos++;
   }
-  else { // É folha, mas não há espaço -> subdivide
-    subdividir(no);
+  else { // É folha, mas não há espaço -> subdivide (apenas se profundidade não é max)
+    /* Caso 1: profundidade não é máxima */
+    if (no->profundidade <= NOCTREE_MAX_PROFUNDIDADE) {
+      subdividir(no);
 
-    // Reidistribui os pontos nos filhos apropriados
-    for (int i = 0; i < NOCTREE_CAPACIDADE; i++) {
-      status = status & realocaAmostra(no, no->pontos[i]);
-      no->pontos[i] = NULL;
+      // Reidistribui os pontos nos filhos apropriados
+      for (int i = 0; i < NOCTREE_CAPACIDADE; i++) {
+        status = status & realocaAmostra(no, no->pontos[i]);
+      }
+      // Housekeeping o vetor de amostras
+      free(no->pontos);
+      no->pontos = NULL;
+      no->qtPontos = no->capacidade = 0;
 
-      // Limpa o vetor de amostras
-      no->qtPontos = 0;
+      // E insere o ponto passado como argumento
+      realocaAmostra(no, ponto);
     }
-
-    // E insere o ponto passado como argumento
-    realocaAmostra(no, ponto);
+    /* Caso 2: profundidade é máxima. Decisão de projeto: alocaremos todas as amostras que vierem para esse nó */
+    else {
+      if (no->qtPontos == no->capacidade) { // Overflow no vetor de amostras
+        no->capacidade = no->capacidade << 1;
+        no->pontos = (amostra**) realloc(no->pontos, sizeof(amostra*) * no->capacidade);
+      }
+      no->pontos[no->qtPontos] = ponto;
+      no->qtPontos++;
+    }
   }
 
   /* Solta o lock */
@@ -112,7 +132,7 @@ void subdividir(noctree* no) {
     amostra *novoCentro = calculaCentroDoOctante(no, novoTamanho, i);
 
     /* Inicializa o filho correspondente */
-    no->filhos[i] = inicializaNo(novoCentro, novoTamanho);
+    no->filhos[i] = inicializaNo(novoCentro, novoTamanho, no->profundidade+1);
 
     LOGP(" -> Filho %d criado com centro (%.2f, %.2f, %.2f) e tamanho (%.2f)",
              i, novoCentro->x, novoCentro->y, novoCentro->z, novoTamanho[0]); ENDL;
@@ -159,16 +179,14 @@ void destroiNo(noctree* no) {
     }
   }
 
-  // Libera a memória das amostras no nó
+  // Libera a memória das amostras guardadas no nó
   for (int i = 0; i < no->qtPontos; i++) {
     free(no->pontos[i]);
   }
+  free(no->pontos);
 
-  // Libera o lock
-  pthread_rwlock_destroy(&no->lock);
-
-  // Libera a memória do centro do nó
-  free(no->centro);
+  free(no->centro); // Libera a memória do centro do nó
+  pthread_rwlock_destroy(&no->lock); // Destrói o lock
   free(no);
 }
 
