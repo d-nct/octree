@@ -9,13 +9,16 @@
  * Cria a estrutura de dados Noctree, que é um Nó da Octree
  */
 typedef struct _Noctree {
-	amostra* pontos[NOCTREE_CAPACIDADE]; // Vetor com pontos contido no nó.
-	int qtPontos;                        // Tamanho do vetor com os pontos
+	amostra** pontos;                    // Vetor com pontos contido no nó.
+                                       // Tem tamanho NOCTREE_CAPACIDADE, salvo se está na profundidade máxima (nesse caso, a capacidade é ilimitada).
+  int capacidade;                      // É número max de elementos que cabem em  pontos
+	int qtPontos;                        // Quantidade de amostras em  pontos
 	amostra* centro;                     // Ponto central do cubo
 	float tamanho[DIM];                  // Dimensões X, Y, Z do cubo
 	struct _Noctree *filhos[QT_FILHOS_NOCTREE]; // 8 filhos do Nóctree
 	int subdividido;                     // 1 se o nó foi subdividido; 0 c.c.
   pthread_rwlock_t lock;               // Lock de leitura/escrita por nó
+  int profundidade; 
 } noctree;
 
 
@@ -42,10 +45,11 @@ int esferaIntersectaCubo(amostra* centro_esfera, float raio, noctree* no);
  * 
  * @param centro É o centro do cubo.
  * @param tamanho Vetor coma as dimensões do cubo em X, Y e Z.
+ * @param profundidade É a altura/profundidade do nó na árvore.
  *
  * @return Ponteiro para o nó da Octree vazio.
  */
-noctree* inicializaNo(amostra* centro, float* tamanho);
+noctree* inicializaNo(amostra* centro, float* tamanho, int profundidade);
 
 /**
  * Insere uma amostra em um nó da Octree.
