@@ -93,7 +93,8 @@ void test_corretude_busca_em_folha() {
   if (resultados) {
     bool p1_encontrado = (resultados[0] == p1 || resultados[1] == p1);
     bool p2_encontrado = (resultados[0] == p2 || resultados[1] == p2);
-    ASSERT(p1_encontrado && p2_encontrado);
+    ASSERT(p1_encontrado);
+    ASSERT(p2_encontrado);
     free(resultados);
   }
 

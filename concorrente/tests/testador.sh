@@ -50,11 +50,12 @@ for (( i=1; i<=ITERATIONS; i++ )); do
 
     # Usa grep e awk para extrair os números das linhas de sumário
     # O ':-0' garante que o valor será 0 se o grep não encontrar a linha (segurança extra)
-    PASSOU_NESTA_ITERACAO=$(echo "$OUTPUT" | grep "Testes que Passaram:" | awk '{print $4}')
+    PASSOU_NESTA_ITERACAO=$(echo "$OUTPUT" | grep "Testes que Passaram:" | awk '{print $4}' | sed 's/[^0-9]*//g')
     PASSOU_NESTA_ITERACAO=${PASSOU_NESTA_ITERACAO:-0}
 
-    FALHOU_NESTA_ITERACAO=$(echo "$OUTPUT" | grep "Testes que Falharam:" | awk '{print $4}')
+    FALHOU_NESTA_ITERACAO=$(echo "$OUTPUT" | grep "Testes que Falharam:" | awk '{print $2}' | sed 's/[^0-9]*//g')
     FALHOU_NESTA_ITERACAO=${FALHOU_NESTA_ITERACAO:-0}
+    echo $PASSOU_NESTA_ITERACAO
     
     # Se uma falha for detectada, imprime a saída completa daquela iteração para análise
     if [ "$FALHOU_NESTA_ITERACAO" -ne 0 ]; then
@@ -69,6 +70,8 @@ for (( i=1; i<=ITERATIONS; i++ )); do
     # Agrega os resultados nos contadores totais
     (( TOTAL_PASSOU += PASSEI_NESTA_ITERACAO ))
     (( TOTAL_FALHOU += FALHOU_NESTA_ITERACAO ))
+
+    echo $TOTAL_PASSOU
 done
 
 
