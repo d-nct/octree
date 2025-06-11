@@ -68,17 +68,21 @@ noctree* inicializaNo(amostra* centro, float* tamanho, int profundidade) {
  * */
 int insereAmostra(noctree* no, amostra* ponto) {
   int status = 1; // Booleano de retorno da função
+  int pegueiOLock = 0;
 
-  /* A primeira coisa é pegar o lock de escrita */
-  pthread_rwlock_wrlock(&no->lock);
-  LOGP(" Peguei o Lock"); ENDL;
+  /* A primeira coisa é pegar o lock de escrita (apenas se é folha) */
+  if (!no->subdividido) { // Aí sim há risco de modificação no nó
+    pthread_rwlock_wrlock(&no->lock);
+    pegueiOLock = 1;
+    LOGP(" Peguei o Lock"); ENDL;
+  }
 
   /* Depois segue normalmente a sessão crítica */
   if (no->subdividido) { // Amostra fica sempre nas folhas
     realocaAmostra(no, ponto);
   }
   else if (no->qtPontos < NOCTREE_CAPACIDADE) { // É folha & há espaço
-    no->pontos[no->qtPontos] = ponto;
+    no->pontos[no->qtPontos] = ponto; // Aloca o ponto
     no->qtPontos++;
   }
   else { // É folha, mas não há espaço -> subdivide (apenas se profundidade não é max)
@@ -101,17 +105,19 @@ int insereAmostra(noctree* no, amostra* ponto) {
     /* Caso 2: profundidade é máxima. Decisão de projeto: alocaremos todas as amostras que vierem para esse nó */
     else {
       if (no->qtPontos == no->capacidade) { // Overflow no vetor de amostras
-        no->capacidade = no->capacidade << 1;
+        no->capacidade = no->capacidade << 1; // Dobra a capacidade
         no->pontos = (amostra**) realloc(no->pontos, sizeof(amostra*) * no->capacidade);
       }
-      no->pontos[no->qtPontos] = ponto;
+      no->pontos[no->qtPontos] = ponto; // Aloca o ponto
       no->qtPontos++;
     }
   }
 
   /* Solta o lock */
-  pthread_rwlock_unlock(&no->lock);
-  LOGP(" Soltei o Lock"); ENDL;
+  if (pegueiOLock) {
+    pthread_rwlock_unlock(&no->lock);
+    LOGP(" Soltei o Lock"); ENDL;
+  }
   return status;
 }
 
