@@ -50,17 +50,17 @@ typedef struct {
   long int idThread;
   long int nthreads;
   long long int N;
-} dados_thread_produtora_t;
+} dados_thread_escritora_t;
 
 typedef struct {
   pthread_t* tid;
   long int idThread;
   long long int qtAmostras;
-} ret_thread_produtora_t;
+} ret_thread_escritora_t;
 
 /* Função que será executada pela thread escritora */
-void* rotina_produtora(void* arg) {
-  dados_thread_produtora_t* dados = (dados_thread_produtora_t*)arg;
+void* rotina_escritora(void* arg) {
+  dados_thread_escritora_t* dados = (dados_thread_escritora_t*)arg;
 
   /* Calcula quantas amostras precisa inserir */
   int qtAmostrasAGerar = dados->N / dados->nthreads;
@@ -70,7 +70,7 @@ void* rotina_produtora(void* arg) {
   preencheOctreeUnif(dados->raiz, qtAmostrasAGerar);
 
   /* Gera o retorno */
-  ret_thread_produtora_t* ret = (ret_thread_produtora_t*) malloc(sizeof(ret_thread_produtora_t));
+  ret_thread_escritora_t* ret = (ret_thread_escritora_t*) malloc(sizeof(ret_thread_escritora_t));
   CHECK_MALLOC(ret);
 
   ret->tid = dados->tid;
@@ -87,23 +87,23 @@ typedef struct {
   long int idThread;
   long int nthreads;
   long long int numBuscas;
-} dados_thread_consumidora_t;
+} dados_thread_leitora_t;
 
 typedef struct {
   pthread_t* tid;
   long int idThread;
   long long int qtAmostrasEncontradas;
   long int qtBuscasRealizadas;
-} ret_thread_consumidora_t;
+} ret_thread_leitora_t;
 
 /* Função que será executada pela thread escritora */
-void* rotina_consumidora(void* arg) {
-  dados_thread_consumidora_t* dados = (dados_thread_consumidora_t*)arg;
+void* rotina_leitora(void* arg) {
+  dados_thread_leitora_t* dados = (dados_thread_leitora_t*)arg;
   amostra* ptAmostra;
   int qt_encontrados; // Retorno da busca
 
   /* Gera o retorno */
-  ret_thread_consumidora_t* ret = (ret_thread_consumidora_t*) malloc(sizeof(ret_thread_consumidora_t));
+  ret_thread_leitora_t* ret = (ret_thread_leitora_t*) malloc(sizeof(ret_thread_leitora_t));
   CHECK_MALLOC(ret);
   ret->tid = dados->tid;
   ret->idThread = dados->idThread;
@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
   srand(time(NULL));
 
   /* Variáveis auxiliares */
-  int nthreadsProd, nthreadsCons;  // Qt de threads (passada linha de comando)
+  int nthreadsEsc, nthreadsLeit;   // Qt de threads (passada linha de comando)
   long long int N;                 // Qt de pontos na octree
   long long int numBuscas;         // Qt de buscas a serem realizadas na octree
   pthread_t *tid;                  // Identificadores das threads no sistema
@@ -138,10 +138,10 @@ int main(int argc, char *argv[]) {
 
   /* Variáveis da árvore */
   noctree* raiz = inicializaNo(inicializaAmostra(0,0,0), (float[]){100,100,100}, 0);
-  dados_thread_produtora_t* ptArgProd;
-  ret_thread_produtora_t** retsProd;
-  dados_thread_consumidora_t* ptArgCons;
-  ret_thread_consumidora_t** retsCons;
+  dados_thread_escritora_t* ptArgEsc;
+  ret_thread_escritora_t** retsEsc;
+  dados_thread_leitora_t* ptArgLeit;
+  ret_thread_leitora_t** retsLeit;
   
   printf("Tomadas de Tempo:\n");
 
@@ -149,72 +149,72 @@ int main(int argc, char *argv[]) {
 
   //--le e avalia os parametros de entrada
   if(argc<5) {
-    printf("Digite: %s <numero de threads produtoras> <nthreads consumidoras> <N> <numBuscas>\n", argv[0]);
+    printf("Digite: %s <numero de threads escritoras> <nthreads leitoras> <N> <numBuscas>\n", argv[0]);
     return 1;
   }
-  nthreadsProd = atoi(argv[1]);
-  nthreadsCons = atoi(argv[2]);
+  nthreadsEsc = atoi(argv[1]);
+  nthreadsLeit = atoi(argv[2]);
   N = atoll(argv[3]);
   numBuscas = atoll(argv[4]);
 
   //--aloca as estruturas
-  tid = (pthread_t*) malloc(sizeof(pthread_t)*(nthreadsProd + nthreadsCons));
+  tid = (pthread_t*) malloc(sizeof(pthread_t)*(nthreadsEsc + nthreadsLeit));
   CHECK_MALLOC(tid);
 
-  retsProd = (ret_thread_produtora_t**) malloc(sizeof(ret_thread_produtora_t*) * nthreadsProd);
-  CHECK_MALLOC(retsProd);
+  retsEsc = (ret_thread_escritora_t**) malloc(sizeof(ret_thread_escritora_t*) * nthreadsEsc);
+  CHECK_MALLOC(retsEsc);
 
-  retsCons = (ret_thread_consumidora_t**) malloc(sizeof(ret_thread_consumidora_t*) * nthreadsCons);
-  CHECK_MALLOC(retsCons);
+  retsLeit = (ret_thread_leitora_t**) malloc(sizeof(ret_thread_leitora_t*) * nthreadsLeit);
+  CHECK_MALLOC(retsLeit);
 
   //--cria as threads
   GET_TIME(inicioAlvo);
   printf("  Início da criação das threads em %lf\n", inicioAlvo - inicioTotal);
 
-  /* Cria as Produtoras, que geram a árvore */
-  for(long int t=0; t < nthreadsProd ; t++) {
+  /* Cria as Escritoras, que geram a árvore */
+  for(long int t=0; t < nthreadsEsc ; t++) {
     /* Cria o argumento */
-    ptArgProd = (dados_thread_produtora_t*) malloc(sizeof(dados_thread_produtora_t));
-    CHECK_MALLOC(ptArgProd);
+    ptArgEsc = (dados_thread_escritora_t*) malloc(sizeof(dados_thread_escritora_t));
+    CHECK_MALLOC(ptArgEsc);
 
-    ptArgProd->tid = &tid[t];
-    ptArgProd->raiz = raiz;
-    ptArgProd->idThread = t;
-    ptArgProd->nthreads = nthreadsProd;
-    ptArgProd->N = N;
+    ptArgEsc->tid = &tid[t];
+    ptArgEsc->raiz = raiz;
+    ptArgEsc->idThread = t;
+    ptArgEsc->nthreads = nthreadsEsc;
+    ptArgEsc->N = N;
 
     /* Inicializa a thread */
-    if (pthread_create(&tid[t], NULL, rotina_produtora, (void*)ptArgProd)) {
+    if (pthread_create(&tid[t], NULL, rotina_escritora, (void*)ptArgEsc)) {
       printf("--ERRO: pthread_create()\n"); exit(-1);
     }
   }
 
-  /* Cria as Consumidoras, que buscam na árvore */
-  for(long int t=nthreadsProd; t < (nthreadsProd + nthreadsCons) ; t++) {
+  /* Cria as Leitoras, que buscam na árvore */
+  for(long int t=nthreadsEsc; t < (nthreadsEsc + nthreadsLeit) ; t++) {
     /* Cria o argumento */
-    ptArgCons = (dados_thread_consumidora_t*) malloc(sizeof(dados_thread_consumidora_t));
-    CHECK_MALLOC(ptArgCons);
+    ptArgLeit = (dados_thread_leitora_t*) malloc(sizeof(dados_thread_leitora_t));
+    CHECK_MALLOC(ptArgLeit);
 
-    ptArgCons->tid = &tid[t];
-    ptArgCons->raiz = raiz;
-    ptArgCons->idThread = t;
-    ptArgCons->nthreads = nthreadsProd;
-    ptArgCons->numBuscas = numBuscas;
+    ptArgLeit->tid = &tid[t];
+    ptArgLeit->raiz = raiz;
+    ptArgLeit->idThread = t;
+    ptArgLeit->nthreads = nthreadsEsc;
+    ptArgLeit->numBuscas = numBuscas;
 
     /* Inicializa a thread */
-    if (pthread_create(&tid[t], NULL, rotina_consumidora, (void*)ptArgCons)) {
+    if (pthread_create(&tid[t], NULL, rotina_leitora, (void*)ptArgLeit)) {
       printf("--ERRO: pthread_create()\n"); exit(-1);
     }
   }
 
-  /* Espera o fim das produtoras e consumidoras */
-  for (int t=0; t < nthreadsProd; t++) {  // Produtoras
-    if (pthread_join(tid[t], (void**) &retsCons[t])) {
+  /* Espera o fim das escritoras e leitoras */
+  for (int t=0; t < nthreadsEsc; t++) {  // escritoras
+    if (pthread_join(tid[t], (void**) &retsLeit[t])) {
       printf("--ERRO: pthread_join() \n"); exit(-1); 
     } 
   }
-  for (int t=nthreadsProd; t < (nthreadsProd + nthreadsCons); t++) {  // Consumidoras
-    if (pthread_join(tid[t], (void**) &retsProd[t - nthreadsProd])) {
+  for (int t=nthreadsEsc; t < (nthreadsEsc + nthreadsLeit); t++) {  // Leitoras
+    if (pthread_join(tid[t], (void**) &retsEsc[t - nthreadsEsc])) {
       printf("--ERRO: pthread_join() \n"); exit(-1); 
     } 
   }
@@ -225,14 +225,14 @@ int main(int argc, char *argv[]) {
   printf("\n");
   printf("RESUMO THREADS\n");
   printf("--------------\n");
-  for (int t = 0; t < nthreadsProd; t++) { // Produtoras
-    printf("Thread #%ld\n", retsProd[t]->idThread);
-    printf("  Gerados e inseridos: %lld\n", retsProd[t]->qtAmostras);
+  for (int t = 0; t < nthreadsEsc; t++) { // escritoras
+    printf("Thread #%ld\n", retsEsc[t]->idThread);
+    printf("  Gerados e inseridos: %lld\n", retsEsc[t]->qtAmostras);
   }
-  for (int t=nthreadsProd; t < (nthreadsProd + nthreadsCons); t++) {  // Consumidoras
-    printf("Thread #%ld\n", retsCons[t - nthreadsProd]->idThread);
-    printf("  Buscas realizadas:    %ld\n", retsCons[t - nthreadsProd]->qtBuscasRealizadas);
-    printf("  Amostras encontradas: %lld\n", retsCons[t - nthreadsProd]->qtAmostrasEncontradas);
+  for (int t=nthreadsEsc; t < (nthreadsEsc + nthreadsLeit); t++) {  // Leitoras
+    printf("Thread #%ld\n", retsLeit[t - nthreadsEsc]->idThread);
+    printf("  Buscas realizadas:    %ld\n", retsLeit[t - nthreadsEsc]->qtBuscasRealizadas);
+    printf("  Amostras encontradas: %lld\n", retsLeit[t - nthreadsEsc]->qtAmostrasEncontradas);
   }
 
   printf("\n");
@@ -242,12 +242,12 @@ int main(int argc, char *argv[]) {
   printf("  Tempo total do programa:        %lf\n", fim - inicioTotal);
 
   free(tid);
-  free(ptArgProd);
-  free(ptArgCons);
-  for (int i = 0; i < nthreadsProd; i++) free(retsProd[i]);
-  for (int i = 0; i < nthreadsCons; i++) free(retsCons[i]);
-  free(retsProd);
-  free(retsCons);
+  free(ptArgEsc);
+  free(ptArgLeit);
+  for (int i = 0; i < nthreadsEsc; i++) free(retsEsc[i]);
+  for (int i = 0; i < nthreadsLeit; i++) free(retsLeit[i]);
+  free(retsEsc);
+  free(retsLeit);
   destroiNo(raiz);
   return 0;
 }
