@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <pthread.h>
-#include <unistd.h> // Para a função sleep()
+#include <unistd.h>
 
 #include "../src/noctree.h"
 #include "timer.h"
@@ -133,8 +133,8 @@ int main(int argc, char *argv[]) {
   long long int N;                 // Qt de pontos na octree
   long long int numBuscas;         // Qt de buscas a serem realizadas na octree
   pthread_t *tid;                  // Identificadores das threads no sistema
-  double inicioAlvo;               // Marcações de tempo da parte concorrente
-  double inicioTotal, fim;         // Marcações de tempo total do programa
+  double inicio, fim;              // Marcacoes de tempo
+  double t_setup, t_criacao, t_busca; // Tomadas de tempo
 
   /* Variáveis da árvore */
   noctree* raiz = inicializaNo(inicializaAmostra(0,0,0), (float[]){100,100,100}, 0);
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
   
   printf("Tomadas de Tempo:\n");
 
-  GET_TIME(inicioTotal);
+  GET_TIME(inicio);
 
   //--le e avalia os parametros de entrada
   if(argc<5) {
@@ -168,8 +168,9 @@ int main(int argc, char *argv[]) {
   CHECK_MALLOC(retsLeit);
 
   //--cria as threads
-  GET_TIME(inicioAlvo);
-  printf("  Início da criação das threads em %lf\n", inicioAlvo - inicioTotal);
+  GET_TIME(fim);
+  t_setup = fim - inicio;
+  printf("  Início da criação das threads em %lf\n", t_setup);
 
   /* Cria as Escritoras, que geram a árvore */
   for(long int t=0; t < nthreadsEsc ; t++) {
@@ -189,6 +190,17 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  /* Espera o fim das escritoras */
+  for (int t=0; t < nthreadsEsc; t++) {
+    if (pthread_join(tid[t], (void**) &retsEsc[t])) {
+      printf("--ERRO: pthread_join() \n"); exit(-1);
+    }
+  }
+
+  GET_TIME(fim);
+  t_criacao = fim - inicio - t_setup; // É o delta
+  printf("  Início das buscas em %lf\n", t_criacao);
+
   /* Cria as Leitoras, que buscam na árvore */
   for(long int t=nthreadsEsc; t < (nthreadsEsc + nthreadsLeit) ; t++) {
     /* Cria o argumento */
@@ -198,7 +210,7 @@ int main(int argc, char *argv[]) {
     ptArgLeit->tid = &tid[t];
     ptArgLeit->raiz = raiz;
     ptArgLeit->idThread = t;
-    ptArgLeit->nthreads = nthreadsEsc;
+    ptArgLeit->nthreads = nthreadsLeit;
     ptArgLeit->numBuscas = numBuscas;
 
     /* Inicializa a thread */
@@ -207,19 +219,17 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  /* Espera o fim das escritoras e leitoras */
-  for (int t=0; t < nthreadsEsc; t++) {  // escritoras
-    if (pthread_join(tid[t], (void**) &retsLeit[t])) {
-      printf("--ERRO: pthread_join() \n"); exit(-1); 
-    } 
+  /* Espera o fim das leitoras */
+  for (int t=nthreadsEsc; t < (nthreadsEsc + nthreadsLeit); t++) {
+    if (pthread_join(tid[t], (void**) &retsLeit[t - nthreadsEsc])) {
+      printf("--ERRO: pthread_join() \n"); exit(-1);
+    }
   }
-  for (int t=nthreadsEsc; t < (nthreadsEsc + nthreadsLeit); t++) {  // Leitoras
-    if (pthread_join(tid[t], (void**) &retsEsc[t - nthreadsEsc])) {
-      printf("--ERRO: pthread_join() \n"); exit(-1); 
-    } 
-  }
+
   GET_TIME(fim);
-  printf("  Fim das Threads em %lf\n", fim - inicioTotal);
+  t_busca = fim - t_criacao - t_setup - inicio;
+  fim = fim - inicio;
+  printf("  Fim das buscas em %lf\n", fim);
 
 
   printf("\n");
@@ -238,8 +248,10 @@ int main(int argc, char *argv[]) {
   printf("\n");
   printf("RESUMO PROGRAMA\n");
   printf("---------------\n");
-  printf("  Tempo de execução concorrente:  %lf\n", fim - inicioAlvo);
-  printf("  Tempo total do programa:        %lf\n", fim - inicioTotal);
+  printf("  Tempo de setup do programa:  %lf seg\n", t_setup);
+  printf("  Tempo de criacao da octree:  %lf seg\n", t_criacao);
+  printf("  Tempo de buscas na octree:   %lf seg\n", t_busca);
+  printf("  Tempo total do programa:     %lf seg\n", fim);
 
   free(tid);
   free(ptArgEsc);
